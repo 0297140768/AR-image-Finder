@@ -24,7 +24,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         sceneView.showsStatistics = true
         
         // Create a new scene
-        let scene = SCNScene(named: "art.scnassets/ship.scn")!
+        let scene = SCNScene() //SCNScene(named: "art.scnassets/ship.scn")!
         
         // Set the scene to the view
         sceneView.scene = scene
@@ -35,7 +35,11 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         
         // Create a session configuration
         let configuration = ARWorldTrackingConfiguration()
+        
+        let referenceImage = ARReferenceImage.referenceImages(inGroupNamed: "AR Resources", bundle: nil)!
 
+        configuration.detectionImages = referenceImage
+        
         // Run the view's session
         sceneView.session.run(configuration)
     }
@@ -57,6 +61,52 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         return node
     }
 */
+    
+    func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
+        switch anchor {
+        case let imageAnchor as ARImageAnchor:
+            nodeAdded(node, for: imageAnchor)
+        case let planeAnchor as ARPlaneAnchor:
+            nodeAdded(node, for: planeAnchor)
+        default:
+            print("Нашли якорь, но это не плоскость и не картинка")
+        }
+    }
+    
+    func nodeAdded(_ node: SCNNode, for imageAnchor: ARImageAnchor) {
+        let referenceImage = imageAnchor.referenceImage
+        var nodeName = ""
+        var koef: Float = 1
+        
+        switch referenceImage.name {
+        case "IMG_3518":
+            nodeName = "Book"
+            koef = 2
+        case "IMG_3519":
+            nodeName = "TV"
+            koef = 0.5
+        default:
+            break
+        }
+        
+        let itemNode = SCNScene(named: "art.scnassets/\(nodeName).scn")?.rootNode.childNode(withName: nodeName, recursively: false)!
+        itemNode?.eulerAngles.x = -Float.pi / 2
+        itemNode?.eulerAngles.y = -Float.pi / 4
+        
+        let scale = Float(referenceImage.physicalSize.width) / (itemNode!.boundingBox.max.z * koef)
+        itemNode?.scale = SCNVector3(scale, scale, scale)
+        
+        if referenceImage.name == "IMG_3518" {
+            itemNode?.position.y = itemNode!.boundingBox.max.x * scale
+        }
+        
+        node.addChildNode(itemNode!)
+        
+    }
+    
+    func nodeAdded(_ node: SCNNode, for planAnchor: ARPlaneAnchor) {
+        
+    }
     
     func session(_ session: ARSession, didFailWithError error: Error) {
         // Present an error message to the user
